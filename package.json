@@ -1,0 +1,19 @@
+{
+  "name": "sgt-m4-final",
+  "version": "1.0.0",
+  "description": "Module 4 Final - Student Grade Table",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MantisMB/sgt-m4-final.git"
+  },
+  "author": "Matthew Baldwin",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MantisMB/sgt-m4-final/issues"
+  },
+  "homepage": "https://github.com/MantisMB/sgt-m4-final#readme"
+}
