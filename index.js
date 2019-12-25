@@ -1,10 +1,12 @@
 const express = require('express');
 const db = require('./db');
-const PORT = 3000 || 9000;
+const PORT = process.env.PORT || 9000;
+const errorHandler = require('./middleware/error_handler');
 
 const app = express();
 
-
+app.use(express.urlencoded({extended:false}));
+app.use(express.json());
 
 app.get('/api/test', async (req,res) => {
 
@@ -38,12 +40,59 @@ app.get('/api/grades', async (req, res) => {
 		}
 	})
 
-	
-
 	res.send({ records })
 
 });
 
+app.post('/api/grades', async (req, res) => {
+
+	const { course, grade, name } = req.body;
+	const errors = [];
+
+	if(!course){
+        errors.push('No course name received');
+    }
+	if(!name){
+        errors.push('No student name received');
+    }
+    if( !grade && grade !==0 ){
+        errors.push('Students grade not received');
+    } else if(isNaN(grade)){
+        errors.push('Course grade for student must be a number');
+    } else if(grade < 0 || grade > 100) {
+        errors.push(`Course grade must be a number between 0 and 100 inclusive. ${grade} is invalid.`);
+    }
+
+    if(errors.length){
+        res.status(422).send({
+			code: 422,
+			errors,
+			message: "Bad POST request"
+        });
+        return;
+	}
+	
+	const addStudent = await db.execute(`
+        INSERT INTO grades
+        (pid, course, grade, name) 
+        VALUES (UUID(),?, ?, ?)
+	`, [course, grade, name]);
+	
+	const [[ record ]] = await db.query(`
+		SELECT pid,course,grade,name,updated AS lastUpdated 
+		FROM grades 
+		WHERE course=? AND grade=? AND name=?`,[course, grade, name]
+		)
+
+    res.send({
+        message: `New student grade record created successfully`,
+        record   
+    });
+
+})
+
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
 	console.log('Our server is running @ localhost:', PORT);
