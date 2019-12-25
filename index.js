@@ -1,6 +1,8 @@
 const express = require('express');
 const db = require('./db');
 const PORT = process.env.PORT || 9000;
+const ApiError = require('./helpers/api_error');
+global.ApiError = ApiError;
 const errorHandler = require('./middleware/error_handler');
 
 const app = express();
@@ -84,6 +86,7 @@ app.post('/api/grades', async (req, res) => {
 		WHERE course=? AND grade=? AND name=?`,[course, grade, name]
 		)
 
+	
     res.send({
         message: `New student grade record created successfully`,
         record   
@@ -91,6 +94,67 @@ app.post('/api/grades', async (req, res) => {
 
 })
 
+app.patch('/api/grades/:record_pid', async (req, res, next) => {
+	const { record_pid } = req.params;
+
+	const { course, grade, name } = req.body;
+	let errors = [];
+
+	let code = [];
+
+	try { 
+	
+		const [[ record ]] = await db.query('SELECT * FROM grades WHERE pid=?', [record_pid])
+		console.log('Record', record)
+		if(record == undefined){
+			code.push (404)
+			errors.push (`No record found with an ID of ${record_pid}`)
+		}
+		if (!name) {
+			code.push (400)
+			errors.push("No valid fields received to update")
+		} 
+		else if(!grade) {
+			code.push (400)
+			errors.push("No valid fields received to update")
+		}
+		else if(!course) {
+			code.push (400)
+			errors.push("No valid fields received to update")
+		}
+
+		if (grade < 0 || grade > 100) {
+			code.push(422)
+			errors.push(`Course grade must be a number between 0 and 100 inclusive, ${grade} is invalid`)
+		}
+		if (errors.length) {
+			res.send({
+			code,
+			errors,
+			message: "Bad PATCH Request"
+			})
+			return;
+		}
+
+		const result = await db.execute(`
+			UPDATE grades 
+			SET course = ?,grade = ?,name = ? WHERE pid = ?
+		`, [course, grade, name, record_pid])
+
+		const [[ updateStudent ]] = await db.query(`SELECT * FROM grades WHERE pid = ?`, [record_pid])
+
+		res.send({
+		message: `Student ${record_pid} has been updated`,
+		updateStudent
+		})
+
+	} 
+	catch (errors) {
+		next(errors)
+  	}
+
+
+});
 
 app.use(errorHandler);
 
