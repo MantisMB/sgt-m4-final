@@ -10,6 +10,7 @@ const app = express();
 app.use(express.urlencoded({extended:false}));
 app.use(express.json());
 
+
 app.get('/api/test', async (req,res) => {
 
 	const [[ result ]] = await db.query(`
@@ -92,12 +93,16 @@ app.post('/api/grades', async (req, res) => {
         record   
     });
 
-})
+});
+
+
+
 
 app.patch('/api/grades/:record_pid', async (req, res, next) => {
 	const { record_pid } = req.params;
 
 	const { course, grade, name } = req.body;
+
 	let errors = [];
 
 	let code = [];
@@ -105,7 +110,7 @@ app.patch('/api/grades/:record_pid', async (req, res, next) => {
 	try { 
 	
 		const [[ record ]] = await db.query('SELECT * FROM grades WHERE pid=?', [record_pid])
-		console.log('Record', record)
+		
 		if(record == undefined){
 			code.push (404)
 			errors.push (`No record found with an ID of ${record_pid}`)
@@ -153,6 +158,48 @@ app.patch('/api/grades/:record_pid', async (req, res, next) => {
 		next(errors)
   	}
 
+});
+
+app.delete('/api/grades/:record_pid', async (req, res, next) => {
+
+	const { record_pid } = req.params;
+	
+	let errors = [];
+
+	let code = [];
+	
+	try {
+
+		const [[ studentRecord ]] = await db.query(`
+			SELECT * from grades 
+			WHERE pid = ?`, [record_pid])
+
+		if (studentRecord == undefined) {
+			code.push(404),
+			errors.push("No record found with an ID of: ", record_pid)
+		}
+
+		if(errors.length){
+			return res.status(404).send({
+				code,
+				errors,
+				message:"Bad DELETE Request"
+			})
+		}
+
+		const result = await db.execute(`
+			DELETE FROM grades 
+			WHERE pid = ?`, [record_pid])
+
+		res.send({
+			message: `Successfully deleted grade record: ${record_pid}`,
+			deletedPid: record_pid
+		})
+
+	} 
+	catch (errors) {
+		next(errors)
+	}
 
 });
 
